@@ -81,6 +81,19 @@ const RetailerDashboard = () => {
         }
     };
 
+    const completeRequest = async (id, politeMessage) => {
+        try {
+            await axios.put(`/api/requests/${id}/complete`,
+                { retailerMessage: politeMessage },
+                { headers: { Authorization: `Bearer ${user.token}` } }
+            );
+            fetchRequests();
+        } catch (err) {
+            console.error('Error completing request:', err);
+            alert(err.response?.data?.message || 'Error completing request. Please try again.');
+        }
+    };
+
     const politeAccept = "Your request has been accepted. We are preparing your medicine.";
     const politeReady = "Your medicines are ready for pickup! Visit us at your convenience.";
     const politeReject = "We apologize, but this medicine is currently out of stock. We will notify you once it arrives.";
@@ -198,7 +211,7 @@ const RetailerDashboard = () => {
                                         <button onClick={() => updateRequestStatus(r._id, 'Ready for Pickup', politeReady)} className="btn-primary" style={{ width: '100%', fontSize: '0.8rem', background: 'var(--success)' }}>Mark as Ready</button>
                                     )}
                                     {r.status === 'Ready for Pickup' && (
-                                        <button onClick={() => updateRequestStatus(r._id, 'Completed', "Thank you for visiting us!")} className="btn-primary" style={{ width: '100%', fontSize: '0.8rem', background: 'var(--primary)' }}>Mark as Collected</button>
+                                        <button onClick={() => completeRequest(r._id, "Thank you for visiting us!")} className="btn-primary" style={{ width: '100%', fontSize: '0.8rem', background: 'var(--primary)' }}>Mark as Collected</button>
                                     )}
                                 </div>
                             ))}

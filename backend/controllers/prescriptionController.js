@@ -40,6 +40,11 @@ const addPrescription = async (req, res) => {
             body: req.body,
             file: req.file
         });
+
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({ message: 'Validation Error', errors: error.errors });
+        }
+
         res.status(500).json({ message: 'Server error adding prescription', error: error.message });
     }
 };

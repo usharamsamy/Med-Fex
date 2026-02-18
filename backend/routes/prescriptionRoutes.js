@@ -1,12 +1,13 @@
 const express = require('express');
 const { addPrescription, getMyPrescriptions, deletePrescription } = require('../controllers/prescriptionController');
 const { protect } = require('../middleware/authMiddleware');
+const upload = require('../middleware/uploadMiddleware');
 const router = express.Router();
 
 router.route('/')
-    .post(protect, addPrescription)
-    .get(protect, getMyPrescriptions);
+    .get(protect, getMyPrescriptions)
+    .post(protect, upload.single('image'), addPrescription);
 
-router.delete('/:id', protect, deletePrescription);
+router.route('/:id').delete(protect, deletePrescription);
 
 module.exports = router;

@@ -6,7 +6,8 @@ const prescriptionSchema = new mongoose.Schema({
     dosage: { type: String, required: true },
     refillDuration: { type: Number, required: true }, // in days
     startDate: { type: Date, default: Date.now },
-    nextRefillDate: { type: Date }
+    nextRefillDate: { type: Date },
+    imageUrl: { type: String }
 }, { timestamps: true });
 
 prescriptionSchema.pre('save', async function () {

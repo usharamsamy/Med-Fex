@@ -25,14 +25,25 @@ const getRetailerRequests = async (req, res) => {
     res.json(requests);
 };
 
+const Notification = require('../models/Notification');
+
 const updateRequestStatus = async (req, res) => {
     const { status, retailerMessage } = req.body;
-    const request = await Request.findById(req.params.id);
+    const request = await Request.findById(req.params.id).populate('customer');
 
     if (request) {
         request.status = status;
         request.retailerMessage = retailerMessage;
         const updatedRequest = await request.save();
+
+        // Notify Customer
+        await Notification.create({
+            user: request.customer._id,
+            title: `Order Status: ${status}`,
+            message: `Your request for ${request.medicineName} is now ${status.toLowerCase()}.${retailerMessage ? ' Note: ' + retailerMessage : ''}`,
+            type: status === 'Ready' ? 'success' : (status === 'Rejected' ? 'danger' : 'info')
+        });
+
         res.json(updatedRequest);
     } else {
         res.status(404).json({ message: 'Request not found' });

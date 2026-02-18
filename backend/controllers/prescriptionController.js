@@ -1,4 +1,4 @@
-const Prescription = require('../models/Prescription');
+const Notification = require('../models/Notification');
 
 const addPrescription = async (req, res) => {
     try {
@@ -13,10 +13,20 @@ const addPrescription = async (req, res) => {
             medicineName,
             dosage,
             refillDuration,
-            startDate: startDate || Date.now()
+            startDate: startDate || Date.now(),
+            imageUrl: req.file ? req.file.path : null
         });
 
         const createdPrescription = await prescription.save();
+
+        // Notify user
+        await Notification.create({
+            user: req.user._id,
+            title: 'New Prescription Added',
+            message: `Your prescription for ${medicineName} has been saved. Reminders will be set for every ${refillDuration} days.`,
+            type: 'success'
+        });
+
         res.status(201).json(createdPrescription);
     } catch (error) {
         console.error('Add Prescription Error:', error);

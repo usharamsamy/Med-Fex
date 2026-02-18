@@ -23,12 +23,14 @@ const addPrescription = async (req, res) => {
         console.log('Prescription saved successfully');
 
         // Notify user
-        await Notification.create({
-            user: req.user._id,
-            title: 'New Prescription Added',
-            message: `Your prescription for ${medicineName} has been saved. Reminders will be set for every ${refillDuration} days.`,
-            type: 'success'
-        });
+        if (req.user) {
+            await Notification.create({
+                user: req.user._id,
+                title: 'New Prescription Added',
+                message: `Your prescription for ${medicineName} has been saved. Reminders will be set for every ${refillDuration} days.`,
+                type: 'success'
+            });
+        }
 
         res.status(201).json(createdPrescription);
     } catch (error) {

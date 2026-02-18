@@ -15,10 +15,12 @@ const addPrescription = async (req, res) => {
             dosage,
             refillDuration,
             startDate: startDate || Date.now(),
-            imageUrl: req.file ? req.file.path : null
+            prescriptionImage: req.file ? `/uploads/${req.file.filename}` : null
         });
 
+        console.log('Attempting to save prescription:', prescription);
         const createdPrescription = await prescription.save();
+        console.log('Prescription saved successfully');
 
         // Notify user
         await Notification.create({
@@ -30,7 +32,12 @@ const addPrescription = async (req, res) => {
 
         res.status(201).json(createdPrescription);
     } catch (error) {
-        console.error('Add Prescription Error:', error);
+        console.error('Add Prescription ERROR DETAILS:', {
+            message: error.message,
+            stack: error.stack,
+            body: req.body,
+            file: req.file
+        });
         res.status(500).json({ message: 'Server error adding prescription', error: error.message });
     }
 };

@@ -41,8 +41,9 @@ const updateRequestStatus = async (req, res) => {
 
             // Deduct stock if marking as Completed
             if (status === 'Completed') {
+                const cleanName = request.medicineName.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                 const medicine = await Medicine.findOne({
-                    name: { $regex: new RegExp(`^${request.medicineName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+                    name: { $regex: new RegExp(`^${cleanName}$`, 'i') },
                     retailer: req.user._id
                 });
 
@@ -78,7 +79,12 @@ const updateRequestStatus = async (req, res) => {
             res.status(404).json({ message: 'Request not found' });
         }
     } catch (error) {
-        console.error('Error updating request status:', error);
+        console.error('Update Request Status ERROR DETAILS:', {
+            message: error.message,
+            stack: error.stack,
+            params: req.params,
+            body: req.body
+        });
         res.status(500).json({ message: 'Server error while updating request' });
     }
 };

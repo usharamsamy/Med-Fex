@@ -116,7 +116,7 @@ const CustomerDashboard = () => {
                         <div style={{
                             width: '20px', height: '20px', borderRadius: '50%',
                             background: idx <= currentIdx ? 'var(--primary)' : 'white',
-                            border: '2px solid' + (idx <= currentIdx ? 'var(--primary)' : '#cbd5e1'),
+                            border: '2px solid ' + (idx <= currentIdx ? 'var(--primary)' : '#cbd5e1'),
                             margin: '0 auto 0.2rem'
                         }}></div>
                         <span style={{ fontSize: '0.65rem', color: idx <= currentIdx ? 'var(--text-dark)' : 'var(--text-light)', fontWeight: idx === currentIdx ? 'bold' : 'normal' }}>{step}</span>

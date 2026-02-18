@@ -4,34 +4,40 @@ const Notification = require('../models/Notification');
 const addPrescription = async (req, res) => {
     try {
         // Log the request for debugging
-        console.log('--- NEW PRESCRIPTION REQUEST ---');
+        console.log('--- DEFINITIVE PRESCRIPTION REQUEST ---');
         console.log('Headers:', req.headers['content-type']);
-        console.log('Body:', req.body);
-        console.log('File:', req.file);
+        console.log('Body:', JSON.stringify(req.body));
+        console.log('File:', req.file ? req.file.filename : 'No file');
 
-        // EXPLICIT ACCESS - NO DESTRUCTURING to prevent crash
-        const medicineName = req.body ? req.body.medicineName : null;
-        const dosage = req.body ? req.body.dosage : null;
-        const refillDays = req.body ? (req.body.refillDays || req.body.refillDuration) : null;
-        const startDate = req.body ? req.body.startDate : null;
+        // 🛡️ HARD GUARD
+        if (!req.body) {
+            return res.status(400).json({ message: 'CRITICAL ERROR: Request body is undefined. Check Multer configuration.' });
+        }
 
+        // FAIL-SAFE ACCESS - ABSOLUTELY NO DESTRUCTURING
+        const medicineName = req.body.medicineName;
+        const dosage = req.body.dosage;
+        const refillDays = req.body.refillDays || req.body.refillDuration;
+        const startDate = req.body.startDate;
+
+        // Manual Validation
         if (!medicineName || !dosage || !refillDays) {
-            console.error('Validation Failed: Missing fields');
+            console.error('Validation Error: Missing fields in body', req.body);
             return res.status(400).json({
-                message: 'Please provide all required fields (medicineName, dosage, refillDays)',
+                message: 'Medicine name, dosage, and refill days are required.',
                 received: { medicineName, dosage, refillDays }
             });
         }
 
-        const prescriptionImage = req.file ? `/uploads/${req.file.filename}` : null;
+        const prescriptionImg = req.file ? `/uploads/${req.file.filename}` : null;
 
         const prescription = new Prescription({
             customer: req.user._id,
-            medicineName: medicineName.trim(),
-            dosage: dosage,
-            refillDuration: Number(refillDays),
+            medicineName: String(medicineName).trim(),
+            dosage: String(dosage),
+            refillDays: Number(refillDays),
             startDate: startDate || Date.now(),
-            prescriptionImage: imagePath
+            prescriptionImage: prescriptionImg
         });
 
         console.log('Attempting to save prescription:', prescription);
@@ -43,7 +49,7 @@ const addPrescription = async (req, res) => {
             await Notification.create({
                 user: req.user._id,
                 title: 'New Prescription Added',
-                message: `Your prescription for ${medicineName} has been saved. Reminders will be set for every ${refillDuration} days.`,
+                message: `Your prescription for ${medicineName} has been saved. Reminders will be set for every ${refillDays} days.`,
                 type: 'success'
             });
         }

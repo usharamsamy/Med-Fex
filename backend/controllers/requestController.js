@@ -5,8 +5,14 @@ const Notification = require('../models/Notification');
 
 const createRequest = async (req, res) => {
     try {
-        const body = req.body || {};
-        const { medicineName, type, prescriptionId } = body;
+        // 🛡️ HARD GUARD
+        if (!req.body) {
+            return res.status(400).json({ message: 'Request body is missing.' });
+        }
+
+        const medicineName = req.body.medicineName;
+        const type = req.body.type;
+        const prescriptionId = req.body.prescriptionId;
 
         if (!medicineName) {
             return res.status(400).json({ message: 'Medicine name is required' });
@@ -14,7 +20,7 @@ const createRequest = async (req, res) => {
 
         const request = new Request({
             customer: req.user._id,
-            medicineName: medicineName.trim(),
+            medicineName: String(medicineName).trim(),
             type,
             prescriptionId
         });

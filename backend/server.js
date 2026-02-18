@@ -23,6 +23,12 @@ if (!fs.existsSync(uploadDir)) {
 app.use(cors());
 app.use(express.json());
 
+// Global safety: Ensure req.body is never undefined
+app.use((req, res, next) => {
+    if (!req.body) req.body = {};
+    next();
+});
+
 // Request logger
 app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);

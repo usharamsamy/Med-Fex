@@ -14,10 +14,10 @@ const app = express();
 const fs = require('fs');
 
 // Ensure uploads directory exists
-const uploadDir = path.join(__dirname, 'uploads');
+const uploadDir = path.resolve(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
-    console.log('Created uploads directory');
+    console.log('Created uploads directory at:', uploadDir);
 }
 
 app.use(cors());
@@ -30,7 +30,7 @@ app.use((req, res, next) => {
     next();
 });
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(uploadDir));
 
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/medicines', require('./routes/medicineRoutes'));

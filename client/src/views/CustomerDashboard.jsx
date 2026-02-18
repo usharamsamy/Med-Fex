@@ -98,7 +98,9 @@ const CustomerDashboard = () => {
             fetchNotifications();
         } catch (err) {
             console.error('Error adding prescription:', err.response?.data || err);
-            alert(err.response?.data?.message || 'Failed to add prescription. Please check console for details.');
+            const errMsg = err.response?.data?.message || 'Failed to add prescription.';
+            const errDetail = err.response?.data?.error || '';
+            alert(`${errMsg}\n${errDetail ? 'Detail: ' + errDetail : 'Check console for full error.'}`);
         }
     };
 
@@ -176,7 +178,8 @@ const CustomerDashboard = () => {
             fetchRequests();
             alert(`We have received your request for ${name}. We will try our best to arrange it for you!`);
         } catch (err) {
-            alert('Failed to send request. Please try again.');
+            console.error('Request error:', err);
+            alert(`Failed to send request: ${err.response?.data?.message || 'Please try again.'}`);
         }
     };
 

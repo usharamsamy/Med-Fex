@@ -90,7 +90,9 @@ const RetailerDashboard = () => {
             fetchRequests();
         } catch (err) {
             console.error('Error completing request:', err);
-            alert(err.response?.data?.message || 'Error completing request. Please try again.');
+            const errMsg = err.response?.data?.message || 'Error completing request.';
+            const errDetail = err.response?.data?.error || '';
+            alert(`${errMsg}\n${errDetail ? 'Detail: ' + errDetail : 'Please try again.'}`);
         }
     };
 

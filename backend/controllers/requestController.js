@@ -54,6 +54,9 @@ const updateRequestStatus = async (req, res) => {
                     } else {
                         return res.status(400).json({ message: 'Cannot complete: Medicine out of stock.' });
                     }
+                } else {
+                    console.warn(`Medicine "${request.medicineName}" not found in your inventory for deduction.`);
+                    // We still allow completion even if stock deduction fails (optional requirement logic)
                 }
             }
 
@@ -65,14 +68,18 @@ const updateRequestStatus = async (req, res) => {
             const isReady = status === 'Ready for Pickup';
             const isCompleted = status === 'Completed';
 
-            await Notification.create({
-                user: request.customer._id,
-                title: isCompleted ? 'Order Completed' : `Order Status: ${status}`,
-                message: isCompleted
-                    ? `Thank you! Your request for ${request.medicineName} has been marked as collected.`
-                    : `Your request for ${request.medicineName} is now ${status.toLowerCase()}.${retailerMessage ? ' Note: ' + retailerMessage : ''}`,
-                type: (isReady || isCompleted) ? 'success' : (status === 'Rejected' ? 'danger' : 'info')
-            });
+            if (request.customer) {
+                await Notification.create({
+                    user: request.customer._id,
+                    title: isCompleted ? 'Order Completed' : `Order Status: ${status}`,
+                    message: isCompleted
+                        ? `Thank you! Your request for ${request.medicineName} has been marked as collected.`
+                        : `Your request for ${request.medicineName} is now ${status.toLowerCase()}.${retailerMessage ? ' Note: ' + retailerMessage : ''}`,
+                    type: (isReady || isCompleted) ? 'success' : (status === 'Rejected' ? 'danger' : 'info')
+                });
+            } else {
+                console.warn('Customer not found for request, skipping notification');
+            }
 
             res.json(updatedRequest);
         } else {

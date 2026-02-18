@@ -28,25 +28,31 @@ const getRetailerRequests = async (req, res) => {
 const Notification = require('../models/Notification');
 
 const updateRequestStatus = async (req, res) => {
-    const { status, retailerMessage } = req.body;
-    const request = await Request.findById(req.params.id).populate('customer');
+    try {
+        const { status, retailerMessage } = req.body;
+        const request = await Request.findById(req.params.id).populate('customer');
 
-    if (request) {
-        request.status = status;
-        request.retailerMessage = retailerMessage;
-        const updatedRequest = await request.save();
+        if (request) {
+            request.status = status;
+            request.retailerMessage = retailerMessage;
+            const updatedRequest = await request.save();
 
-        // Notify Customer
-        await Notification.create({
-            user: request.customer._id,
-            title: `Order Status: ${status}`,
-            message: `Your request for ${request.medicineName} is now ${status.toLowerCase()}.${retailerMessage ? ' Note: ' + retailerMessage : ''}`,
-            type: status === 'Ready' ? 'success' : (status === 'Rejected' ? 'danger' : 'info')
-        });
+            // Notify Customer
+            const isReady = status === 'Ready for Pickup';
+            await Notification.create({
+                user: request.customer._id,
+                title: `Order Status: ${status}`,
+                message: `Your request for ${request.medicineName} is now ${status.toLowerCase()}.${retailerMessage ? ' Note: ' + retailerMessage : ''}`,
+                type: isReady ? 'success' : (status === 'Rejected' ? 'danger' : 'info')
+            });
 
-        res.json(updatedRequest);
-    } else {
-        res.status(404).json({ message: 'Request not found' });
+            res.json(updatedRequest);
+        } else {
+            res.status(404).json({ message: 'Request not found' });
+        }
+    } catch (error) {
+        console.error('Error updating request status:', error);
+        res.status(500).json({ message: 'Server error while updating request' });
     }
 };
 

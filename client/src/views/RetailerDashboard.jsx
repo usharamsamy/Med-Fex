@@ -194,7 +194,7 @@ const RetailerDashboard = () => {
                                         </div>
                                     )}
                                     {r.status === 'Accepted' && (
-                                        <button onClick={() => updateRequestStatus(r._id, 'Ready', politeReady)} className="btn-primary" style={{ width: '100%', fontSize: '0.8rem', background: 'var(--success)' }}>Mark as Ready</button>
+                                        <button onClick={() => updateRequestStatus(r._id, 'Ready for Pickup', politeReady)} className="btn-primary" style={{ width: '100%', fontSize: '0.8rem', background: 'var(--success)' }}>Mark as Ready</button>
                                     )}
                                 </div>
                             ))}

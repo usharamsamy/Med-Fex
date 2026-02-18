@@ -105,7 +105,7 @@ const CustomerDashboard = () => {
 
     // Helper for request timeline
     const RequestTimeline = ({ status }) => {
-        const steps = ['Pending', 'Accepted', 'Ready', 'Completed'];
+        const steps = ['Pending', 'Accepted', 'Ready for Pickup', 'Completed'];
         const currentIdx = steps.indexOf(status);
 
         return (

@@ -4,18 +4,22 @@ const Notification = require('../models/Notification');
 const addPrescription = async (req, res) => {
     try {
         // Log the request for debugging
-        console.log('Incoming addPrescription request:');
+        console.log('--- NEW PRESCRIPTION REQUEST ---');
+        console.log('Headers:', req.headers['content-type']);
         console.log('Body:', req.body);
         console.log('File:', req.file);
 
-        // Defensive extraction from req.body
-        const body = req.body || {};
-        const { medicineName, dosage, refillDuration, startDate } = body;
+        // EXPLICIT ACCESS - NO DESTRUCTURING to prevent crash
+        const medicineName = req.body ? req.body.medicineName : null;
+        const dosage = req.body ? req.body.dosage : null;
+        const refillDays = req.body ? (req.body.refillDays || req.body.refillDuration) : null;
+        const startDate = req.body ? req.body.startDate : null;
 
-        if (!medicineName || !dosage || !refillDuration) {
+        if (!medicineName || !dosage || !refillDays) {
+            console.error('Validation Failed: Missing fields');
             return res.status(400).json({
-                message: 'Please provide all required fields',
-                received: { medicineName, dosage, refillDuration }
+                message: 'Please provide all required fields (medicineName, dosage, refillDays)',
+                received: { medicineName, dosage, refillDays }
             });
         }
 
@@ -23,12 +27,11 @@ const addPrescription = async (req, res) => {
 
         const prescription = new Prescription({
             customer: req.user._id,
-            medicineName,
-            dosage,
-            refillDuration,
+            medicineName: medicineName.trim(),
+            dosage: dosage,
+            refillDuration: Number(refillDays),
             startDate: startDate || Date.now(),
-            prescriptionImage,
-            imageUrl: prescriptionImage // Fallback for schema compatibility
+            prescriptionImage: imagePath
         });
 
         console.log('Attempting to save prescription:', prescription);

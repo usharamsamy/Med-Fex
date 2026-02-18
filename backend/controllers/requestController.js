@@ -4,27 +4,46 @@ const Medicine = require('../models/Medicine');
 const Notification = require('../models/Notification');
 
 const createRequest = async (req, res) => {
-    const { medicineName, type, prescriptionId } = req.body;
-    const request = new Request({
-        customer: req.user._id,
-        medicineName: medicineName.trim(),
-        type,
-        prescriptionId
-    });
-    const createdRequest = await request.save();
-    res.status(201).json(createdRequest);
+    try {
+        const body = req.body || {};
+        const { medicineName, type, prescriptionId } = body;
+
+        if (!medicineName) {
+            return res.status(400).json({ message: 'Medicine name is required' });
+        }
+
+        const request = new Request({
+            customer: req.user._id,
+            medicineName: medicineName.trim(),
+            type,
+            prescriptionId
+        });
+        const createdRequest = await request.save();
+        res.status(201).json(createdRequest);
+    } catch (error) {
+        console.error('Create Request Error:', error);
+        res.status(500).json({ message: 'Error creating request', error: error.message });
+    }
 };
 
 const getCustomerRequests = async (req, res) => {
-    const requests = await Request.find({ customer: req.user._id }).sort({ createdAt: -1 });
-    res.json(requests);
+    try {
+        const requests = await Request.find({ customer: req.user._id }).sort({ createdAt: -1 });
+        res.json(requests);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching customer requests' });
+    }
 };
 
 const getRetailerRequests = async (req, res) => {
-    // In a real app, retailers would only see requests for their shop. 
-    // For this simplified version, retailers see all requests they can fulfill.
-    const requests = await Request.find().populate('customer', 'name email').sort({ createdAt: -1 });
-    res.json(requests);
+    try {
+        // In a real app, retailers would only see requests for their shop. 
+        // For this simplified version, retailers see all requests they can fulfill.
+        const requests = await Request.find().populate('customer', 'name email').sort({ createdAt: -1 });
+        res.json(requests);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching retailer requests' });
+    }
 };
 
 const updateRequestStatus = async (req, res) => {

@@ -6,34 +6,49 @@ const getMedicines = async (req, res) => {
 };
 
 const createMedicine = async (req, res) => {
-    const { name, category, price, stock, description } = req.body;
-    const medicine = new Medicine({
-        name: name?.trim(),
-        category,
-        price,
-        stock,
-        description,
-        retailer: req.user._id
-    });
-    const createdMedicine = await medicine.save();
-    res.status(201).json(createdMedicine);
+    try {
+        const body = req.body || {};
+        const { name, category, price, stock, description } = body;
+
+        if (!name || !price) {
+            return res.status(400).json({ message: 'Name and price are required' });
+        }
+
+        const medicine = new Medicine({
+            name: name?.trim(),
+            category,
+            price,
+            stock,
+            description,
+            retailer: req.user._id
+        });
+        const createdMedicine = await medicine.save();
+        res.status(201).json(createdMedicine);
+    } catch (error) {
+        res.status(500).json({ message: 'Error creating medicine' });
+    }
 };
 
 const updateMedicine = async (req, res) => {
-    const { name, category, price, stock, description } = req.body;
-    const medicine = await Medicine.findById(req.params.id);
+    try {
+        const body = req.body || {};
+        const { name, category, price, stock, description } = body;
+        const medicine = await Medicine.findById(req.params.id);
 
-    if (medicine && medicine.retailer.toString() === req.user._id.toString()) {
-        medicine.name = name?.trim() || medicine.name;
-        medicine.category = category || medicine.category;
-        medicine.price = price || medicine.price;
-        medicine.stock = stock || medicine.stock;
-        medicine.description = description || medicine.description;
+        if (medicine && medicine.retailer.toString() === req.user._id.toString()) {
+            medicine.name = name?.trim() || medicine.name;
+            medicine.category = category || medicine.category;
+            medicine.price = price || medicine.price;
+            medicine.stock = stock || medicine.stock;
+            medicine.description = description || medicine.description;
 
-        const updatedMedicine = await medicine.save();
-        res.json(updatedMedicine);
-    } else {
-        res.status(404).json({ message: 'Medicine not found or unauthorized' });
+            const updatedMedicine = await medicine.save();
+            res.json(updatedMedicine);
+        } else {
+            res.status(404).json({ message: 'Medicine not found or unauthorized' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Error updating medicine' });
     }
 };
 

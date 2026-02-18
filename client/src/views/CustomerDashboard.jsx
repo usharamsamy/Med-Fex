@@ -87,8 +87,7 @@ const CustomerDashboard = () => {
 
             await axios.post('/api/prescriptions', formData, {
                 headers: {
-                    Authorization: `Bearer ${user.token}`,
-                    'Content-Type': 'multipart/form-data'
+                    Authorization: `Bearer ${user.token}`
                 }
             });
 

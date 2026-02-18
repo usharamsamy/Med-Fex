@@ -1,5 +1,6 @@
 const Request = require('../models/Request');
 const Prescription = require('../models/Prescription');
+const Medicine = require('../models/Medicine');
 
 const createRequest = async (req, res) => {
     const { medicineName, type, prescriptionId } = req.body;
@@ -40,9 +41,8 @@ const updateRequestStatus = async (req, res) => {
 
             // Deduct stock if marking as Completed
             if (status === 'Completed') {
-                const Medicine = require('../models/Medicine');
                 const medicine = await Medicine.findOne({
-                    name: { $regex: new RegExp(`^${request.medicineName}$`, 'i') },
+                    name: { $regex: new RegExp(`^${request.medicineName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
                     retailer: req.user._id
                 });
 

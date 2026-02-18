@@ -77,6 +77,7 @@ const RetailerDashboard = () => {
             fetchRequests();
         } catch (err) {
             console.error('Error updating status:', err);
+            alert(err.response?.data?.message || 'Error updating status. Please try again.');
         }
     };
 

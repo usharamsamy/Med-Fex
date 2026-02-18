@@ -1,3 +1,4 @@
+const Prescription = require('../models/Prescription');
 const Notification = require('../models/Notification');
 
 const addPrescription = async (req, res) => {

@@ -33,17 +33,44 @@ const updateRequestStatus = async (req, res) => {
         const request = await Request.findById(req.params.id).populate('customer');
 
         if (request) {
+            // Lock if already completed
+            if (request.status === 'Completed') {
+                return res.status(400).json({ message: 'Request is already completed and locked.' });
+            }
+
+            // Deduct stock if marking as Completed
+            if (status === 'Completed') {
+                const Medicine = require('../models/Medicine');
+                const medicine = await Medicine.findOne({
+                    name: { $regex: new RegExp(`^${request.medicineName}$`, 'i') },
+                    retailer: req.user._id
+                });
+
+                if (medicine) {
+                    if (medicine.stock > 0) {
+                        medicine.stock -= 1;
+                        await medicine.save();
+                    } else {
+                        return res.status(400).json({ message: 'Cannot complete: Medicine out of stock.' });
+                    }
+                }
+            }
+
             request.status = status;
             request.retailerMessage = retailerMessage;
             const updatedRequest = await request.save();
 
             // Notify Customer
             const isReady = status === 'Ready for Pickup';
+            const isCompleted = status === 'Completed';
+
             await Notification.create({
                 user: request.customer._id,
-                title: `Order Status: ${status}`,
-                message: `Your request for ${request.medicineName} is now ${status.toLowerCase()}.${retailerMessage ? ' Note: ' + retailerMessage : ''}`,
-                type: isReady ? 'success' : (status === 'Rejected' ? 'danger' : 'info')
+                title: isCompleted ? 'Order Completed' : `Order Status: ${status}`,
+                message: isCompleted
+                    ? `Thank you! Your request for ${request.medicineName} has been marked as collected.`
+                    : `Your request for ${request.medicineName} is now ${status.toLowerCase()}.${retailerMessage ? ' Note: ' + retailerMessage : ''}`,
+                type: (isReady || isCompleted) ? 'success' : (status === 'Rejected' ? 'danger' : 'info')
             });
 
             res.json(updatedRequest);

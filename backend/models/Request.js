@@ -6,7 +6,7 @@ const requestSchema = new mongoose.Schema({
     type: { type: String, enum: ['refill', 'new'], required: true },
     status: {
         type: String,
-        enum: ['Pending', 'Accepted', 'Ready for Pickup', 'Rejected'],
+        enum: ['Pending', 'Accepted', 'Ready for Pickup', 'Completed', 'Rejected'],
         default: 'Pending'
     },
     retailerMessage: { type: String },

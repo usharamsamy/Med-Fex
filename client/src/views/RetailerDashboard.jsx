@@ -196,6 +196,9 @@ const RetailerDashboard = () => {
                                     {r.status === 'Accepted' && (
                                         <button onClick={() => updateRequestStatus(r._id, 'Ready for Pickup', politeReady)} className="btn-primary" style={{ width: '100%', fontSize: '0.8rem', background: 'var(--success)' }}>Mark as Ready</button>
                                     )}
+                                    {r.status === 'Ready for Pickup' && (
+                                        <button onClick={() => updateRequestStatus(r._id, 'Completed', "Thank you for visiting us!")} className="btn-primary" style={{ width: '100%', fontSize: '0.8rem', background: 'var(--primary)' }}>Mark as Collected</button>
+                                    )}
                                 </div>
                             ))}
                             {requests.length === 0 && <p style={{ color: 'var(--text-light)', textAlign: 'center', padding: '1rem' }}>No pending requests.</p>}

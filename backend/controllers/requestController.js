@@ -119,10 +119,18 @@ const completeRequest = async (req, res) => {
 
         // Deduct stock
         const cleanName = request.medicineName.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const medicine = await Medicine.findOne({
+        // Try exact match first, then fallback to partial
+        let medicine = await Medicine.findOne({
             name: { $regex: new RegExp(`^${cleanName}$`, 'i') },
             retailer: req.user._id
         });
+
+        if (!medicine) {
+            medicine = await Medicine.findOne({
+                name: { $regex: new RegExp(`${cleanName}`, 'i') },
+                retailer: req.user._id
+            });
+        }
 
         if (medicine) {
             if (medicine.stock > 0) {

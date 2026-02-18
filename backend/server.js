@@ -22,6 +22,13 @@ if (!fs.existsSync(uploadDir)) {
 
 app.use(cors());
 app.use(express.json());
+
+// Request logger
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    if (req.method !== 'GET') console.log('Body:', JSON.stringify(req.body));
+    next();
+});
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -34,10 +41,14 @@ app.use('/api/suggestions', require('./routes/suggestionRoutes'));
 
 // Global error handler for multer
 app.use((err, req, res, next) => {
+    console.error('GLOBAL ERROR:', err);
     if (err instanceof require('multer').MulterError) {
-        return res.status(400).json({ message: 'File upload error', error: err.message });
+        return res.status(400).json({ message: `File upload error: ${err.message}`, code: err.code });
     } else if (err) {
-        return res.status(500).json({ message: err.message || 'Internal server error' });
+        return res.status(500).json({
+            message: err.message || 'Internal server error',
+            error: process.env.NODE_ENV === 'development' ? err : {}
+        });
     }
     next();
 });

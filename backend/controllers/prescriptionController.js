@@ -9,13 +9,16 @@ const addPrescription = async (req, res) => {
             return res.status(400).json({ message: 'Please provide all required fields' });
         }
 
+        const prescriptionImage = req.file ? `/uploads/${req.file.filename}` : null;
+
         const prescription = new Prescription({
             customer: req.user._id,
             medicineName,
             dosage,
             refillDuration,
             startDate: startDate || Date.now(),
-            prescriptionImage: req.file ? `/uploads/${req.file.filename}` : null
+            prescriptionImage,
+            imageUrl: prescriptionImage // Fallback for schema compatibility
         });
 
         console.log('Attempting to save prescription:', prescription);

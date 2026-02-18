@@ -3,10 +3,20 @@ const Notification = require('../models/Notification');
 
 const addPrescription = async (req, res) => {
     try {
-        const { medicineName, dosage, refillDuration, startDate } = req.body;
+        // Log the request for debugging
+        console.log('Incoming addPrescription request:');
+        console.log('Body:', req.body);
+        console.log('File:', req.file);
+
+        // Defensive extraction from req.body
+        const body = req.body || {};
+        const { medicineName, dosage, refillDuration, startDate } = body;
 
         if (!medicineName || !dosage || !refillDuration) {
-            return res.status(400).json({ message: 'Please provide all required fields' });
+            return res.status(400).json({
+                message: 'Please provide all required fields',
+                received: { medicineName, dosage, refillDuration }
+            });
         }
 
         const prescriptionImage = req.file ? `/uploads/${req.file.filename}` : null;

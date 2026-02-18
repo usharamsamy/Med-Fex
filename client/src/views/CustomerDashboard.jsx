@@ -78,9 +78,10 @@ const CustomerDashboard = () => {
             }
 
             const formData = new FormData();
-            formData.append('medicineName', newPrescription.medicineName);
-            formData.append('dosage', newPrescription.dosage);
-            formData.append('refillDuration', Number(newPrescription.refillDuration));
+            formData.append('medicineName', newPrescription.medicineName.toString());
+            formData.append('dosage', newPrescription.dosage.toString());
+            formData.append('refillDuration', newPrescription.refillDuration.toString());
+
             if (prescriptionImage) {
                 formData.append('image', prescriptionImage);
             }

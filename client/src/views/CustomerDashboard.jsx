@@ -184,6 +184,20 @@ const CustomerDashboard = () => {
         }
     };
 
+    const handleReRequest = async (requestId) => {
+        try {
+            await axios.post(`/api/requests/re-request/${requestId}`, {}, {
+                headers: { Authorization: `Bearer ${user.token}` }
+            });
+            alert('Re-request submitted successfully! A new pending request has been created.');
+            fetchRequests();
+            fetchNotifications();
+        } catch (err) {
+            console.error('Re-request error:', err);
+            alert(err.response?.data?.message || 'Failed to process re-request. Please try again.');
+        }
+    };
+
     return (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '2rem', position: 'relative' }}>
             <div>
@@ -322,9 +336,16 @@ const CustomerDashboard = () => {
                             <div key={r._id} style={{ padding: '1rem', borderBottom: '1px solid var(--border)' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
                                     <h5 style={{ margin: 0 }}>{r.medicineName}</h5>
-                                    <span className={`status-badge status-${r.status.toLowerCase().replace(/ /g, '-')}`}>{r.status}</span>
+                                    {r.status === 'Rejected' && r.notified ? (
+                                        <span className="status-badge status-accepted" style={{ background: 'var(--success)', color: 'white' }}>Back in Stock</span>
+                                    ) : (
+                                        <span className={`status-badge status-${r.status.toLowerCase().replace(/ /g, '-')}`}>{r.status}</span>
+                                    )}
                                 </div>
-                                <p style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>Type: {r.type}</p>
+                                <p style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                                    Type: {r.type === 'auto-refill' ? 'Auto Refill Sent' : r.type} {r.notified && ' (Restocked)'}
+                                    {r.totalTablets > 0 && ` • ${r.totalTablets} tablets`}
+                                </p>
 
                                 {/* Timeline Enhancement */}
                                 <RequestTimeline status={r.status} />
@@ -333,6 +354,15 @@ const CustomerDashboard = () => {
                                     <div style={{ marginTop: '0.5rem', padding: '0.5rem', background: '#f8fafc', borderRadius: '0.4rem', fontSize: '0.8rem', borderLeft: '3px solid var(--primary)' }}>
                                         <strong>Note:</strong> {r.retailerMessage}
                                     </div>
+                                )}
+                                {r.status === 'Rejected' && r.notified && (
+                                    <button
+                                        onClick={() => handleReRequest(r._id)}
+                                        className="btn-primary"
+                                        style={{ width: '100%', fontSize: '0.8rem', marginTop: '0.5rem', background: 'var(--success)' }}
+                                    >
+                                        Re-request Now
+                                    </button>
                                 )}
                             </div>
                         ))}
@@ -371,7 +401,8 @@ const CustomerDashboard = () => {
                             </div>
                             <div style={{ marginBottom: '1.5rem' }}>
                                 <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.3rem' }}>Refill Every (Days)</label>
-                                <input required type="number" value={newPrescription.refillDuration} onChange={e => setNewPrescription({ ...newPrescription, refillDuration: e.target.value })} style={{ width: '100%', padding: '0.6rem', border: '1px solid var(--border)', borderRadius: '0.4rem' }} />
+                                <input required type="number" min="1" value={newPrescription.refillDuration} onChange={e => setNewPrescription({ ...newPrescription, refillDuration: e.target.value })} style={{ width: '100%', padding: '0.6rem', border: Number(newPrescription.refillDuration) < 1 ? '1px solid var(--danger)' : '1px solid var(--border)', borderRadius: '0.4rem' }} />
+                                {Number(newPrescription.refillDuration) < 1 && <small style={{ color: 'var(--danger)', fontSize: '0.75rem' }}>Value must be at least 1 day</small>}
                             </div>
                             <div style={{ marginBottom: '1.5rem' }}>
                                 <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.3rem' }}>Upload Prescription (Optional)</label>
@@ -384,7 +415,7 @@ const CustomerDashboard = () => {
                             </div>
                             <div style={{ display: 'flex', gap: '1rem' }}>
                                 <button type="button" onClick={() => setShowAddModal(false)} style={{ flex: 1, background: '#f1f5f9' }}>Cancel</button>
-                                <button type="submit" className="btn-primary" style={{ flex: 1 }}>Add</button>
+                                <button type="submit" className="btn-primary" disabled={Number(newPrescription.refillDuration) < 1} style={{ flex: 1 }}>Add</button>
                             </div>
                         </form>
                     </div>

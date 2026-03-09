@@ -4,9 +4,10 @@ const prescriptionSchema = new mongoose.Schema({
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     medicineName: { type: String, required: true },
     dosage: { type: String, required: true },
-    refillDays: { type: Number, required: true }, // Changed from refillDuration for consistency
+    refillDays: { type: Number, required: true, min: 1 }, // Changed from refillDuration for consistency
     startDate: { type: Date, default: Date.now },
     nextRefillDate: { type: Date },
+    refillNotified: { type: Boolean, default: false },
     prescriptionImage: { type: String }
 }, { timestamps: true });
 

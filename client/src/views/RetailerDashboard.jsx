@@ -68,10 +68,10 @@ const RetailerDashboard = () => {
         }
     };
 
-    const updateRequestStatus = async (id, status, politeMessage) => {
+    const updateRequestStatus = async (id, status, politeMessage, rejectionReason) => {
         try {
             await axios.put(`/api/requests/${id}/status`,
-                { status, retailerMessage: politeMessage },
+                { status, retailerMessage: politeMessage, rejectionReason },
                 { headers: { Authorization: `Bearer ${user.token}` } }
             );
             fetchRequests();
@@ -194,19 +194,46 @@ const RetailerDashboard = () => {
                             {requests.map(r => (
                                 <div key={r._id} style={{ padding: '1.2rem', background: '#f8fafc', borderRadius: '0.8rem', border: '1px solid var(--border)' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8rem' }}>
-                                        <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 'bold', textTransform: 'uppercase' }}>{r.type}</span>
+                                        <span style={{ fontSize: '0.75rem', color: r.type === 'auto-refill' ? 'var(--warning-dark, #854d0e)' : 'var(--primary)', fontWeight: 'bold', textTransform: 'uppercase' }}>
+                                            {r.type === 'auto-refill' ? 'Auto Refill Reminder' : r.type}
+                                        </span>
                                         <span className={`status-badge status-${r.status.toLowerCase().replace(/ /g, '-')}`} style={{ fontSize: '0.7rem' }}>{r.status}</span>
                                     </div>
                                     <h4 style={{ margin: '0 0 0.4rem 0' }}>{r.medicineName}</h4>
-                                    <p style={{ fontSize: '0.85rem', color: 'var(--text-dark)', marginBottom: '1rem' }}>
+                                    <p style={{ fontSize: '0.85rem', color: 'var(--text-dark)', marginBottom: '0.6rem' }}>
                                         From: <strong>{r.customer?.name}</strong><br />
                                         <span style={{ color: 'var(--text-light)', fontSize: '0.75rem' }}>{r.customer?.email}</span>
                                     </p>
 
+                                    {r.totalTablets > 0 && (
+                                        <div style={{ fontSize: '0.8rem', marginBottom: '1rem', padding: '0.6rem', background: '#eff6ff', borderRadius: '0.4rem', border: '1px solid #dbeafe' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
+                                                <span>Requirement:</span>
+                                                <strong style={{ color: 'var(--primary)' }}>{r.totalTablets} tablets ({r.requiredStock} units)</strong>
+                                            </div>
+                                            {(() => {
+                                                const med = medicines.find(m => m.name.toLowerCase().trim() === r.medicineName.toLowerCase().trim());
+                                                const hasStock = med ? med.stock >= (r.requiredStock || 1) : false;
+                                                return (
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                        <span>In Stock:</span>
+                                                        <strong style={{ color: hasStock ? 'var(--success)' : 'var(--danger)' }}>
+                                                            {med ? `${med.stock} units` : 'Not Found'}
+                                                            {!hasStock && med && ' (Insufficient)'}
+                                                        </strong>
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
+                                    )}
+
                                     {r.status === 'Pending' && (
                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                                             <button onClick={() => updateRequestStatus(r._id, 'Accepted', politeAccept)} className="btn-primary" style={{ flex: 1, padding: '0.5rem', fontSize: '0.8rem' }}>Accept</button>
-                                            <button onClick={() => updateRequestStatus(r._id, 'Rejected', politeReject)} style={{ flex: 1, background: '#fee2e2', color: '#991b1b', border: 'none', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer' }}>Reject</button>
+                                            <button onClick={() => {
+                                                const isOutOfStock = window.confirm('Reject as Out of Stock? (This will notify the customer once restocked)');
+                                                updateRequestStatus(r._id, 'Rejected', politeReject, isOutOfStock ? 'Out of Stock' : 'Other');
+                                            }} style={{ flex: 1, background: '#fee2e2', color: '#991b1b', border: 'none', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer' }}>Reject</button>
                                         </div>
                                     )}
                                     {r.status === 'Accepted' && (
@@ -241,11 +268,13 @@ const RetailerDashboard = () => {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem' }}>Price (Rs)</label>
-                                    <input required type="number" value={newMed.price} onChange={e => setNewMed({ ...newMed, price: e.target.value })} style={{ width: '100%', padding: '0.6rem', border: '1px solid var(--border)', borderRadius: '0.4rem' }} />
+                                    <input required type="number" min="0" step="0.01" value={newMed.price} onChange={e => setNewMed({ ...newMed, price: e.target.value })} style={{ width: '100%', padding: '0.6rem', border: Number(newMed.price) < 0 ? '1px solid var(--danger)' : '1px solid var(--border)', borderRadius: '0.4rem' }} />
+                                    {Number(newMed.price) < 0 && <small style={{ color: 'var(--danger)', fontSize: '0.7rem' }}>Price cannot be negative</small>}
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem' }}>Stock Qty</label>
-                                    <input required type="number" value={newMed.stock} onChange={e => setNewMed({ ...newMed, stock: e.target.value })} style={{ width: '100%', padding: '0.6rem', border: '1px solid var(--border)', borderRadius: '0.4rem' }} />
+                                    <input required type="number" min="0" value={newMed.stock} onChange={e => setNewMed({ ...newMed, stock: e.target.value })} style={{ width: '100%', padding: '0.6rem', border: Number(newMed.stock) < 0 ? '1px solid var(--danger)' : '1px solid var(--border)', borderRadius: '0.4rem' }} />
+                                    {Number(newMed.stock) < 0 && <small style={{ color: 'var(--danger)', fontSize: '0.7rem' }}>Stock cannot be negative</small>}
                                 </div>
                             </div>
                             <div style={{ marginBottom: '1.5rem' }}>
@@ -254,7 +283,7 @@ const RetailerDashboard = () => {
                             </div>
                             <div style={{ display: 'flex', gap: '1rem' }}>
                                 <button type="button" onClick={() => setShowAddModal(false)} style={{ flex: 1, background: '#f1f5f9', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Cancel</button>
-                                <button type="submit" className="btn-primary" style={{ flex: 1 }}>{editingMedicine ? 'Update' : 'Add'}</button>
+                                <button type="submit" className="btn-primary" disabled={Number(newMed.price) < 0 || Number(newMed.stock) < 0} style={{ flex: 1 }}>{editingMedicine ? 'Update' : 'Add'}</button>
                             </div>
                         </form>
                     </div>

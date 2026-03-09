@@ -29,6 +29,10 @@ const addPrescription = async (req, res) => {
             });
         }
 
+        if (Number(refillDays) <= 0) {
+            return res.status(400).json({ message: 'Refill interval must be at least 1 day' });
+        }
+
         const prescriptionImg = req.file ? `/uploads/${req.file.filename}` : null;
 
         const prescription = new Prescription({

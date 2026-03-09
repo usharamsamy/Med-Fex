@@ -18,11 +18,25 @@ const createRequest = async (req, res) => {
             return res.status(400).json({ message: 'Medicine name is required' });
         }
 
+        let totalTablets = 0;
+        let requiredStock = 1;
+
+        if (prescriptionId) {
+            const presc = await Prescription.findById(prescriptionId);
+            if (presc) {
+                const calc = calculateRequiredStock(presc.dosage, presc.refillDays);
+                totalTablets = calc.totalTablets;
+                requiredStock = calc.requiredStock;
+            }
+        }
+
         const request = new Request({
             customer: req.user._id,
             medicineName: String(medicineName).trim(),
             type,
-            prescriptionId
+            prescriptionId,
+            totalTablets,
+            requiredStock
         });
         const createdRequest = await request.save();
         res.status(201).json(createdRequest);
@@ -54,13 +68,29 @@ const getRetailerRequests = async (req, res) => {
 
 const updateRequestStatus = async (req, res) => {
     try {
-        const { status, retailerMessage } = req.body;
+        const { status, retailerMessage, rejectionReason } = req.body;
         const request = await Request.findById(req.params.id).populate('customer');
 
         if (request) {
             // Lock if already completed
             if (request.status === 'Completed') {
                 return res.status(400).json({ message: 'Request is already completed and locked.' });
+            }
+
+            // Guard for Acceptance: Ensure stock is sufficient
+            if (status === 'Accepted') {
+                const cleanName = request.medicineName.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const medicine = await Medicine.findOne({
+                    name: { $regex: new RegExp(`^${cleanName}$`, 'i') },
+                    retailer: req.user._id
+                });
+
+                const neededQty = request.requiredStock || 1;
+                if (medicine && medicine.stock < neededQty) {
+                    return res.status(400).json({
+                        message: `Cannot accept: Insufficient stock. Needed: ${neededQty}, Available: ${medicine.stock}`
+                    });
+                }
             }
 
             // Deduct stock if marking as Completed
@@ -72,11 +102,12 @@ const updateRequestStatus = async (req, res) => {
                 });
 
                 if (medicine) {
-                    if (medicine.stock > 0) {
-                        medicine.stock -= 1;
+                    const deductionQty = request.requiredStock || 1;
+                    if (medicine.stock >= deductionQty) {
+                        medicine.stock -= deductionQty;
                         await medicine.save();
                     } else {
-                        return res.status(400).json({ message: 'Cannot complete: Medicine out of stock.' });
+                        return res.status(400).json({ message: `Cannot complete: Insufficient stock. Needed: ${deductionQty}, Available: ${medicine.stock}` });
                     }
                 } else {
                     console.warn(`Medicine "${request.medicineName}" not found in your inventory for deduction.`);
@@ -86,6 +117,9 @@ const updateRequestStatus = async (req, res) => {
 
             request.status = status;
             request.retailerMessage = retailerMessage;
+            if (status === 'Rejected' && rejectionReason) {
+                request.rejectionReason = rejectionReason;
+            }
             const updatedRequest = await request.save();
 
             // Notify Customer
@@ -157,12 +191,13 @@ const completeRequest = async (req, res) => {
         }
 
         if (medicine) {
-            if (medicine.stock > 0) {
-                medicine.stock -= 1;
+            const deductionQty = request.requiredStock || 1;
+            if (medicine.stock >= deductionQty) {
+                medicine.stock -= deductionQty;
                 await medicine.save();
                 console.log(`Stock deducted for ${medicine.name}. New stock: ${medicine.stock}`);
             } else {
-                return res.status(400).json({ message: `Cannot complete: ${medicine.name} is out of stock.` });
+                return res.status(400).json({ message: `Cannot complete: Insufficient stock for ${medicine.name}. Needed: ${deductionQty}, Available: ${medicine.stock}` });
             }
         } else {
             console.warn(`Medicine "${request.medicineName}" not found in your inventory for deduction.`);
@@ -190,4 +225,95 @@ const completeRequest = async (req, res) => {
     }
 };
 
-module.exports = { createRequest, getCustomerRequests, getRetailerRequests, updateRequestStatus, completeRequest };
+const reRequest = async (req, res) => {
+    try {
+        const oldRequest = await Request.findById(req.params.id);
+
+        if (!oldRequest) {
+            return res.status(404).json({ message: 'Original request not found' });
+        }
+
+        // Validate that this request was indeed notified for restock
+        if (!oldRequest.notified || oldRequest.status !== 'Rejected') {
+            return res.status(400).json({ message: 'Request is not eligible for re-request' });
+        }
+
+        // Check if medicine is in stock
+        const cleanName = oldRequest.medicineName.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const medicine = await Medicine.findOne({
+            name: { $regex: new RegExp(`^${cleanName}$`, 'i') }
+        });
+
+        if (!medicine || medicine.stock <= 0) {
+            return res.status(400).json({ message: 'Medicine is currently out of stock. Cannot re-request yet.' });
+        }
+
+        // Calculate requirements
+        let totalTablets = oldRequest.totalTablets || 0;
+        let requiredStock = oldRequest.requiredStock || 1;
+
+        if (oldRequest.prescriptionId && (!totalTablets || requiredStock === 1)) {
+            const presc = await Prescription.findById(oldRequest.prescriptionId);
+            if (presc) {
+                const calc = calculateRequiredStock(presc.dosage, presc.refillDays);
+                totalTablets = calc.totalTablets;
+                requiredStock = calc.requiredStock;
+            }
+        }
+
+        // Create the new request
+        const newRequest = new Request({
+            customer: req.user._id,
+            medicineName: oldRequest.medicineName,
+            type: oldRequest.type,
+            prescriptionId: oldRequest.prescriptionId,
+            status: 'Pending',
+            totalTablets,
+            requiredStock
+        });
+
+        const createdRequest = await newRequest.save();
+
+        // Mark the old request so the button doesn't show up anymore
+        oldRequest.notified = false;
+        await oldRequest.save();
+
+        // Notify Customer of the fresh pending request
+        await Notification.create({
+            user: req.user._id,
+            title: 'Re-request Successful',
+            message: `Your fresh request for ${newRequest.medicineName} has been submitted and is now pending.`,
+            type: 'info'
+        });
+
+        res.status(201).json(createdRequest);
+    } catch (error) {
+        console.error('Re-request Error:', error);
+        res.status(500).json({ message: 'Server error while processing re-request', error: error.message });
+    }
+};
+
+const calculateRequiredStock = (dosage, days) => {
+    try {
+        if (!dosage || !days) return { totalTablets: 0, requiredStock: 1 };
+
+        // Parse dosage (e.g., "1-1-0", "1-0-1", "2-2-2")
+        const parts = dosage.split('-').map(p => {
+            const num = Number(p.trim());
+            return isNaN(num) ? 0 : num;
+        });
+
+        const tabletsPerDay = parts.reduce((a, b) => a + b, 0);
+        const totalTablets = tabletsPerDay * Number(days);
+
+        // 1 stock unit = 10 tablets, round up
+        const requiredStock = Math.ceil(totalTablets / 10) || 1;
+
+        return { totalTablets, requiredStock };
+    } catch (err) {
+        console.error('Calculation Error:', err);
+        return { totalTablets: 0, requiredStock: 1 };
+    }
+};
+
+module.exports = { createRequest, getCustomerRequests, getRetailerRequests, updateRequestStatus, completeRequest, reRequest, calculateRequiredStock };

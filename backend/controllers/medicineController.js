@@ -1,4 +1,5 @@
 const Medicine = require('../models/Medicine');
+const { notifyCustomersOnRestock } = require('../services/notificationService');
 
 const getMedicines = async (req, res) => {
     const medicines = await Medicine.find({ retailer: req.user._id });
@@ -14,6 +15,10 @@ const createMedicine = async (req, res) => {
             return res.status(400).json({ message: 'Name and price are required' });
         }
 
+        if (Number(price) < 0 || (stock !== undefined && Number(stock) < 0)) {
+            return res.status(400).json({ message: 'Price and stock cannot be negative' });
+        }
+
         const medicine = new Medicine({
             name: name?.trim(),
             category,
@@ -23,6 +28,12 @@ const createMedicine = async (req, res) => {
             retailer: req.user._id
         });
         const createdMedicine = await medicine.save();
+
+        // Trigger notification if stock is restored
+        if (createdMedicine.stock > 0) {
+            await notifyCustomersOnRestock(createdMedicine.name);
+        }
+
         res.status(201).json(createdMedicine);
     } catch (error) {
         res.status(500).json({ message: 'Error creating medicine' });
@@ -33,6 +44,11 @@ const updateMedicine = async (req, res) => {
     try {
         const body = req.body || {};
         const { name, category, price, stock, description } = body;
+
+        if ((price !== undefined && Number(price) < 0) || (stock !== undefined && Number(stock) < 0)) {
+            return res.status(400).json({ message: 'Price and stock cannot be negative' });
+        }
+
         const medicine = await Medicine.findById(req.params.id);
 
         if (medicine && medicine.retailer.toString() === req.user._id.toString()) {
@@ -43,6 +59,12 @@ const updateMedicine = async (req, res) => {
             medicine.description = description || medicine.description;
 
             const updatedMedicine = await medicine.save();
+
+            // Trigger notification if stock is restored
+            if (updatedMedicine.stock > 0) {
+                await notifyCustomersOnRestock(updatedMedicine.name);
+            }
+
             res.json(updatedMedicine);
         } else {
             res.status(404).json({ message: 'Medicine not found or unauthorized' });

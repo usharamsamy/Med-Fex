@@ -92,3 +92,12 @@ button {
   background: #fee2e2;
   color: #991b1b;
 }
+
+@keyframes subtleZoom {
+  from { transform: scale(1); }
+  to { transform: scale(1.05); }
+}
+
+.animate-zoom {
+  animation: subtleZoom 20s infinite alternate linear;
+}

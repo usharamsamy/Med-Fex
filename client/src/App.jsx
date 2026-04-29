@@ -23,25 +23,28 @@ const AppContent = () => {
     return (
         <Router>
             <Navbar />
-            <main className={user ? "container" : ""} style={{ padding: user ? '2rem 0' : '0' }}>
+            <main style={{ padding: user ? (['retailer', 'customer'].includes(user.role) ? '0' : '2rem 0') : '0' }}>
+                <div className={user && !['retailer', 'customer'].includes(user.role) ? "container" : ""}>
                 <Routes>
-                    <Route path="/" element={<HomePage />} />
+                    <Route path="/" element={!user ? <HomePage /> : <Navigate to={user.role === 'retailer' ? '/retailer' : '/customer'} />} />
                     <Route path="/login-role" element={!user ? <RoleSelection /> : <Navigate to={user.role === 'retailer' ? '/retailer' : '/customer'} />} />
                     <Route path="/login" element={!user ? <Login /> : <Navigate to={user.role === 'retailer' ? '/retailer' : '/customer'} />} />
                     <Route path="/register" element={!user ? <Register /> : <Navigate to={user.role === 'retailer' ? '/retailer' : '/customer'} />} />
 
-                    <Route path="/customer" element={
+                    <Route path="/customer/*" element={
                         <ProtectedRoute role="customer">
                             <CustomerDashboard />
                         </ProtectedRoute>
                     } />
 
-                    <Route path="/retailer" element={
+                    <Route path="/retailer/*" element={
                         <ProtectedRoute role="retailer">
                             <RetailerDashboard />
                         </ProtectedRoute>
                     } />
+                    <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
+                </div>
             </main>
         </Router>
     );

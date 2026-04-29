@@ -1,9 +1,11 @@
 import React, { useState, useContext } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { LogIn } from 'lucide-react';
 
 const Login = () => {
+    const location = useLocation();
+    const role = location.state?.role || '';
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -13,7 +15,7 @@ const Login = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await login(email, password);
+            await login(email, password, role);
             navigate('/');
         } catch (err) {
             setError(err.response?.data?.message || 'Login failed');
@@ -25,7 +27,7 @@ const Login = () => {
             <div className="card">
                 <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
                     <LogIn size={48} color="var(--primary)" style={{ marginBottom: '1rem' }} />
-                    <h2>Login to MedFex</h2>
+                    <h2>Login as {role ? role.charAt(0).toUpperCase() + role.slice(1) : 'MedFex'}</h2>
                     <p style={{ color: 'var(--text-light)' }}>Welcome back!</p>
                 </div>
 

@@ -26,18 +26,37 @@ const getPersonalizedSuggestions = async (req, res) => {
             category: { $in: categories },
             name: { $nin: medicineNames.map(name => new RegExp(name, 'i')) },
             stock: { $gt: 0 }
-        }).limit(4);
+        });
 
-        // 3. Fallback if no category matches
-        if (suggestions.length < 2) {
+        // 3. Filter out items matching user's allergies
+        const user = await require('../models/User').findById(req.user._id);
+        const filteredSuggestions = suggestions.filter(s => {
+            if (!user.allergies || user.allergies.length === 0) return true;
+            return !user.allergies.some(allergy =>
+                s.name.toLowerCase().includes(allergy.toLowerCase()) ||
+                (s.description && s.description.toLowerCase().includes(allergy.toLowerCase()))
+            );
+        }).slice(0, 4);
+
+        // 4. Fallback if no category matches or allergies filtered too many
+        if (filteredSuggestions.length < 2) {
             const extra = await Medicine.find({
                 name: { $nin: medicineNames.map(name => new RegExp(name, 'i')) },
                 stock: { $gt: 0 }
-            }).limit(4 - suggestions.length);
-            return res.json([...suggestions, ...extra]);
+            });
+
+            const extraFiltered = extra.filter(s => {
+                if (!user.allergies || user.allergies.length === 0) return true;
+                return !user.allergies.some(allergy =>
+                    s.name.toLowerCase().includes(allergy.toLowerCase()) ||
+                    (s.description && s.description.toLowerCase().includes(allergy.toLowerCase()))
+                );
+            });
+
+            return res.json([...filteredSuggestions, ...extraFiltered].slice(0, 4));
         }
 
-        res.json(suggestions);
+        res.json(filteredSuggestions);
     } catch (error) {
         console.error('Suggestions Error:', error);
         res.status(500).json({ message: 'Error fetching suggestions' });

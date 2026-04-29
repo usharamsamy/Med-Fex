@@ -17,6 +17,7 @@ const RoleSelection = () => {
             }}>
                 <RoleCard 
                     to="/login"
+                    state={{ role: 'customer' }}
                     role="customer"
                     title="Customer"
                     description="Order medicines, manage prescriptions, and get refill alerts."
@@ -24,6 +25,7 @@ const RoleSelection = () => {
                 />
                 <RoleCard 
                     to="/login"
+                    state={{ role: 'retailer' }}
                     role="retailer"
                     title="Retailer"
                     description="Manage inventory, fulfill requests, and track shop performance."
@@ -38,8 +40,8 @@ const RoleSelection = () => {
     );
 };
 
-const RoleCard = ({ to, role, title, description, icon }) => (
-    <Link to={to} style={{ textDecoration: 'none' }}>
+const RoleCard = ({ to, role, title, description, icon, state }) => (
+    <Link to={to} state={state} style={{ textDecoration: 'none' }}>
         <div style={{ 
             padding: '2.5rem', 
             borderRadius: '1rem', 

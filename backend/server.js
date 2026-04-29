@@ -3,12 +3,16 @@ const path = require('path');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const connectDB = require('./config/db');
+const categoryRoutes = require('./routes/categoryRoutes');
+const healthRecordRoutes = require('./routes/healthRecordRoutes');
 const initRefillCron = require('./jobs/refillCron');
+const initExpiryCron = require('./jobs/expiryCron');
 
 dotenv.config();
 
 connectDB();
 initRefillCron();
+initExpiryCron();
 
 const app = express();
 const fs = require('fs');
@@ -44,6 +48,9 @@ app.use('/api/requests', require('./routes/requestRoutes'));
 app.use('/api/prescriptions', require('./routes/prescriptionRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/suggestions', require('./routes/suggestionRoutes'));
+app.use('/api/analytics', require('./routes/analyticsRoutes'));
+app.use('/api/categories', categoryRoutes);
+app.use('/api/health-records', healthRecordRoutes);
 
 // Global error handler for multer
 app.use((err, req, res, next) => {

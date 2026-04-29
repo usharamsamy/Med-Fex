@@ -1,5 +1,6 @@
 const Prescription = require('../models/Prescription');
 const Notification = require('../models/Notification');
+const { logActivity } = require('../services/activityService');
 
 const addPrescription = async (req, res) => {
     try {
@@ -56,6 +57,7 @@ const addPrescription = async (req, res) => {
                 message: `Your prescription for ${medicineName} has been saved. Reminders will be set for every ${refillDays} days.`,
                 type: 'success'
             });
+            await logActivity(req.user, 'Add Prescription', `Uploaded new prescription for ${medicineName}`);
         }
 
         res.status(201).json(createdPrescription);
@@ -83,7 +85,9 @@ const getMyPrescriptions = async (req, res) => {
 const deletePrescription = async (req, res) => {
     const prescription = await Prescription.findById(req.params.id);
     if (prescription && prescription.customer.toString() === req.user._id.toString()) {
+        const medName = prescription.medicineName;
         await prescription.deleteOne();
+        await logActivity(req.user, 'Delete Prescription', `Removed prescription for ${medName}`);
         res.json({ message: 'Prescription removed' });
     } else {
         res.status(404).json({ message: 'Prescription not found' });
